@@ -19,16 +19,39 @@ import json
 from prometheus_client import Counter, Histogram, Gauge, start_http_server
 from typing import Optional, List, Dict, Any
 
+# Database configuration
+DATA_DIR = "/app/data"
+DB_FILE = os.path.join(DATA_DIR, "bot_data.db")
+LOG_FILE = os.path.join(DATA_DIR, "bot.log")
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('bot.log'),
+        logging.FileHandler(LOG_FILE),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Log database information for debugging
+logger.info(f"Database file: {DB_FILE}")
+logger.info(f"Data directory: {DATA_DIR}")
+logger.info(f"Log file: {LOG_FILE}")
+
+# Test write permissions
+try:
+    test_file = os.path.join(DATA_DIR, "write_test.tmp")
+    with open(test_file, 'w') as f:
+        f.write("test")
+    os.remove(test_file)
+    logger.info("✅ Data directory is writable")
+except Exception as e:
+    logger.error(f"❌ Data directory write test failed: {e}")
 
 # Load environment variables
 load_dotenv()
@@ -55,10 +78,6 @@ NOTIFICATION_COUNTER = Counter('discord_bot_notifications_total', 'Total notific
 ACTIVE_SUBSCRIBERS = Gauge('discord_bot_active_subscribers', 'Number of active subscribers')
 MONITORED_NODES = Gauge('discord_bot_monitored_nodes', 'Number of monitored nodes')
 BOT_UPTIME = Gauge('discord_bot_uptime_seconds', 'Bot uptime in seconds')
-
-# Database configuration
-DB_FILE = "bot_data.db"
-db_lock = Lock()
 
 class DatabaseManager:
     def __init__(self, db_file: str):
