@@ -204,6 +204,18 @@ docker-compose build discord-bot
 docker-compose up -d
 ```
 
+## Backup Database
+```bash
+# Create backup directory
+mkdir -p ./backups
+
+# Simple backup with timestamp
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+docker cp $(docker-compose ps -q discord-bot):/app/data/bot_data.db ./backups/bot_data_backup_${TIMESTAMP}.db
+
+echo "✅ Backup created: ./backups/bot_data_backup_${TIMESTAMP}.db"
+```
+
 ## 🤝 Contributing
 
 1. Fork the repository
