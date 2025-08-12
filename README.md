@@ -6,12 +6,11 @@ A production-ready Discord bot for monitoring Juneo validator nodes with compreh
 
 ```bash
 # 1. Clone/setup project
-mkdir discord-bot && cd discord-bot
+git clone git@github.com:SRV-YouSoRandom/juneo-validator-tool.git
 # ... copy all files from artifacts
 
 # 2. Make setup script executable and run
-chmod +x setup.sh
-./setup.sh
+cd juneo-validator-tool
 
 # 3. Configure your bot
 cp .env.docker .env
