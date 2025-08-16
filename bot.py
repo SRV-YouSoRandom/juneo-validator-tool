@@ -694,11 +694,11 @@ async def format_validator_info(validator_info: Optional[Dict[str, Any]]) -> dis
         inline=False
     ).add_field(
         name="**Potential Reward:**",
-        value=f"{base_potential_reward:.2f} JUNE",
+        value=f"{base_potential_reward:.6f} JUNE",
         inline=False
     ).add_field(
         name="**Potential Rewards with Fees:**",
-        value=f"{potential_rewards_with_fees:.2f} JUNE",
+        value=f"{potential_rewards_with_fees:.6f} JUNE",
         inline=False
     ).add_field(
         name="**Delegator Count:**",
@@ -706,7 +706,7 @@ async def format_validator_info(validator_info: Optional[Dict[str, Any]]) -> dis
         inline=False
     ).add_field(
         name="**Delegator Weight:**",
-        value=f"{int(validator_info['delegatorWeight']) / 1e9:.2f} JUNE",
+        value=f"{int(validator_info['delegatorWeight']) / 1e9:.6f} JUNE",
         inline=False
     )
 
