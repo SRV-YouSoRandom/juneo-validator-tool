@@ -599,6 +599,46 @@ def format_peer_info(peer_info: Optional[Dict[str, Any]], node_id: str) -> disco
 
     return embed
 
+
+def calculate_potential_rewards_with_fees(validator_info: Dict[str, Any]) -> float:
+    """
+    Calculate the potential rewards with delegation fees for a validator.
+    
+    Args:
+        validator_info: Validator information from the RPC response
+        
+    Returns:
+        float: Total potential rewards including delegation fees in JUNE
+    """
+    try:
+        # Get base potential reward for the validator
+        validator_potential_reward = float(validator_info.get('potentialReward', 0))
+        
+        # Get delegation fee percentage
+        delegation_fee_str = validator_info.get('delegationFee', '0.0000')
+        delegation_fee_percentage = float(delegation_fee_str) / 100.0  # Convert to decimal
+        
+        # Calculate total delegation rewards from all delegators
+        total_delegation_rewards = 0.0
+        delegators = validator_info.get('delegators', [])
+        
+        for delegator in delegators:
+            delegator_potential_reward = float(delegator.get('potentialReward', 0))
+            total_delegation_rewards += delegator_potential_reward
+        
+        # Calculate delegation fees (validator's cut from delegation rewards)
+        delegation_fees = total_delegation_rewards * delegation_fee_percentage
+        
+        # Total potential rewards = validator reward + delegation fees
+        total_potential_rewards = validator_potential_reward + delegation_fees
+        
+        # Convert from nJUNE to JUNE (divide by 1e9)
+        return total_potential_rewards / 1e9
+        
+    except (ValueError, TypeError) as e:
+        logger.error(f"Error calculating potential rewards with fees: {e}")
+        return 0.0
+
 async def format_validator_info(validator_info: Optional[Dict[str, Any]]) -> discord.Embed:
     """Format validator information into Discord embed"""
     if not validator_info:
@@ -620,6 +660,10 @@ async def format_validator_info(validator_info: Optional[Dict[str, Any]]) -> dis
 
     status_indicator = ":green_circle:" if validator_info['connected'] else ":red_circle:"
     uptime_bar = get_uptime_bar(uptime_percentage)
+    
+    # Calculate potential rewards with fees
+    potential_rewards_with_fees = calculate_potential_rewards_with_fees(validator_info)
+    base_potential_reward = int(validator_info['potentialReward']) / 1e9
 
     embed = discord.Embed(
         title="Validator Node Status",
@@ -650,7 +694,11 @@ async def format_validator_info(validator_info: Optional[Dict[str, Any]]) -> dis
         inline=False
     ).add_field(
         name="**Potential Reward:**",
-        value=f"{int(validator_info['potentialReward']) / 1e9:.2f} JUNE",
+        value=f"{base_potential_reward:.2f} JUNE",
+        inline=False
+    ).add_field(
+        name="**Potential Rewards with Fees:**",
+        value=f"{potential_rewards_with_fees:.2f} JUNE",
         inline=False
     ).add_field(
         name="**Delegator Count:**",
@@ -1039,39 +1087,6 @@ async def status(interaction: discord.Interaction):
     finally:
         handle_command_metric('status', command_success)
 
-@bot.tree.command(name='height', description='Get block height of P-chain and JUNE-chain')
-async def height(interaction: discord.Interaction):
-    """Get blockchain heights"""
-    await interaction.response.defer(ephemeral=True)
-    command_success = False
-    
-    try:
-        pchain_height = await fetch_block_height_pchain()
-        june_chain_height = await fetch_block_height_june_chain()
-
-        embed = discord.Embed(
-            title="Block Heights",
-            color=discord.Color.blue()
-        ).add_field(
-            name="P-chain Block Height", 
-            value=pchain_height,
-            inline=False
-        ).add_field(
-            name="JUNE-chain Block Height", 
-            value=june_chain_height,
-            inline=False
-        )
-
-        await interaction.followup.send(embed=embed, ephemeral=True)
-        command_success = True
-        logger.info(f"User {interaction.user.id} checked block heights")
-    
-    except Exception as e:
-        logger.error(f"Error in height command: {e}")
-        await interaction.followup.send(f"Error fetching block heights: {e}", ephemeral=True)
-    finally:
-        handle_command_metric('height', command_success)
-
 @bot.tree.command(name='list', description='List all subscribed NodeIDs and Names')
 async def list_command(interaction: discord.Interaction):
     """List user subscriptions"""
@@ -1141,10 +1156,6 @@ async def help_command(interaction: discord.Interaction):
         ).add_field(
             name="/status", 
             value="Get detailed status of your subscribed NodeIDs.",
-            inline=False
-        ).add_field(
-            name="/height", 
-            value="Get the current block heights of P-chain and JUNE-chain.",
             inline=False
         ).add_field(
             name="/list",
